@@ -2,7 +2,21 @@ import hashlib
 import sqlite3
 from flask import Flask, request, jsonify
 
+app = Flask(__name__)
+DB_NAME = "cloud_storage.db"
 
+def init_db():
+    """Initializes the database and creates a table with a unique hash index."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS data_records (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            content TEXT NOT NULL,
+            data_hash TEXT NOT NULL UNIQUE,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
     conn.commit()
     conn.close()
 
@@ -25,7 +39,7 @@ def upload_data():
     cursor = conn.cursor()
     
     try:
-        # Validate and insert data [cite: 10, 11]
+        # Validate and insert data
         cursor.execute("INSERT INTO data_records (content, data_hash) VALUES (?, ?)", 
                        (raw_content, content_hash))
         conn.commit()
@@ -36,7 +50,7 @@ def upload_data():
         }), 201
         
     except sqlite3.IntegrityError:
-        # Prevent duplicates from being added [cite: 11]
+        # Prevent duplicates from being added
         return jsonify({
             "status": "Rejected",
             "message": "Data redundancy removal system flagged this record as a duplicate entry.",
